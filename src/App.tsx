@@ -19,7 +19,7 @@ export const App: React.FC = () => {
   const [filterType, setFilterType] = useState(FilterType.ALL);
   const [errorType, setErrorType] = useState(ErrorType.NONE);
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
-  const [isHidden, setHidden] = useState(false);
+  const [isHidden, setHidden] = useState(true);
   const [isInputActive, setInputActive] = useState(false);
   const [inputTitle, setInputTitle] = useState('');
   const [loadingTodos, setLoadingTodos] = useState<number[]>([]);
@@ -55,9 +55,13 @@ export const App: React.FC = () => {
         case FilterType.ALL:
           return todosList;
         case FilterType.ACTIVE:
-          return todosList.filter((todo) => !todo.completed);
+          return todosList.filter(
+            (todo) => !todo.completed,
+          );
         case FilterType.COMPLETED:
-          return todosList.filter((todo) => todo.completed);
+          return todosList.filter(
+            (todo) => todo.completed,
+          );
         default:
           return todosList;
       }
@@ -70,73 +74,93 @@ export const App: React.FC = () => {
     [filterTodos, filterType],
   );
 
-  const addTodoItem = useCallback((newTodo: Todo) => {
-    const { title } = newTodo;
+  const addTodoItem = useCallback(
+    (newTodo: Todo) => {
+      const { title } = newTodo;
 
-    if (title.trim() === '') {
-      setErrorType(ErrorType.TITLE);
-      setHidden(false);
-
-      return;
-    }
-
-    setTempTodo({ ...newTodo, id: 0 });
-    setInputActive(true);
-
-    addTodo(USER_ID, newTodo)
-      .then((result) => {
-        setTodos((prevTodos) => [...prevTodos, result]);
-      })
-      .catch(() => {
-        setErrorType(ErrorType.ADD);
+      if (title.trim() === '') {
+        setErrorType(ErrorType.TITLE);
         setHidden(false);
-      })
-      .finally(() => {
-        setInputActive(false);
-        setTempTodo(null);
+
+        return;
+      }
+
+      setTempTodo({ ...newTodo, id: 0 });
+      setInputActive(true);
+
+      addTodo(USER_ID, newTodo)
+        .then((result) => {
+          setTodos(
+            prevTodos => [...prevTodos, result],
+          );
+        })
+        .catch(() => {
+          setErrorType(ErrorType.ADD);
+          setHidden(false);
+        })
+        .finally(() => {
+          setInputActive(false);
+          setTempTodo(null);
+        });
+    }, [todos],
+  );
+
+  const deleteTodoItem = useCallback(
+    (todoId: number) => {
+      setLoadingTodos(
+        prevState => [...prevState, todoId],
+      );
+
+      deleteTodo(todoId)
+        .then(() => {
+          setTodos(
+            prevTodos => prevTodos.filter(
+              (todo) => todo.id !== todoId,
+            ),
+          );
+        })
+        .catch(() => {
+          setErrorType(ErrorType.DELETE);
+          setHidden(false);
+        })
+        .finally(() => {
+          setLoadingTodos([]);
+        });
+    }, [todos],
+  );
+
+  const clearCompleted = useCallback(
+    () => {
+      const completedIds = completedTodos.map((todo) => todo.id);
+
+      setLoadingTodos(completedIds);
+      completedTodos.forEach((todo) => {
+        deleteTodoItem(todo.id);
       });
-  }, [todos]);
+    }, [completedTodos],
+  );
 
-  const deleteTodoItem = useCallback((todoId: number) => {
-    setLoadingTodos((prevState) => [...prevState, todoId]);
+  const toggleTodoStatus = useCallback(
+    (todoId: number, completed: boolean) => {
+      setLoadingTodos(
+        prevIds => [...prevIds, todoId],
+      );
 
-    deleteTodo(todoId)
-      .then(() => {
-        setTodos((prevTodos) => prevTodos.filter((todo) => todo.id !== todoId));
-      })
-      .catch(() => {
-        setErrorType(ErrorType.DELETE);
-        setHidden(false);
-      })
-      .finally(() => {
-        setLoadingTodos([]);
-      });
-  }, [todos]);
-
-  const clearCompleted = useCallback(() => {
-    const completedIds = completedTodos.map((todo) => todo.id);
-
-    setLoadingTodos(completedIds);
-    completedTodos.forEach((todo) => {
-      deleteTodoItem(todo.id);
-    });
-  }, [completedTodos]);
-
-  const toggleTodoStatus = useCallback((todoId: number, completed: boolean) => {
-    setLoadingTodos((prevIds) => [...prevIds, todoId]);
-
-    editTodoStatus(todoId, !completed)
-      .catch(() => {
-        setErrorType(ErrorType.EDIT);
-        setHidden(false);
-      })
-      .finally(() => {
-        setLoadingTodos([]);
-      });
-  }, [todos]);
+      editTodoStatus(todoId, !completed)
+        .catch(() => {
+          setErrorType(ErrorType.EDIT);
+          setHidden(false);
+        })
+        .finally(() => {
+          setLoadingTodos([]);
+        });
+    }, [todos],
+  );
 
   const toggleEveryTodoStatus = useCallback(() => {
-    const isAnyTodoCompleted = todos.some(todo => todo.completed === false);
+    const isAnyTodoCompleted = todos.some(
+      todo => todo.completed === false,
+    );
 
     if (isAnyTodoCompleted) {
       todos.map(todo => (
@@ -149,17 +173,21 @@ export const App: React.FC = () => {
     }
   }, [todos]);
 
-  const editTodo = useCallback((todoId: number, newTitle: string) => {
-    setLoadingTodos((prevIds) => [...prevIds, todoId]);
-    editTodoTitle(todoId, newTitle)
-      .catch(() => {
-        setErrorType(ErrorType.UPDATE);
-        setHidden(false);
-      })
-      .finally(() => {
-        setLoadingTodos([]);
-      });
-  }, [todos]);
+  const editTodo = useCallback(
+    (todoId: number, newTitle: string) => {
+      setLoadingTodos(
+        prevIds => [...prevIds, todoId],
+      );
+      editTodoTitle(todoId, newTitle)
+        .catch(() => {
+          setErrorType(ErrorType.UPDATE);
+          setHidden(false);
+        })
+        .finally(() => {
+          setLoadingTodos([]);
+        });
+    }, [todos],
+  );
 
   if (!USER_ID) {
     return <UserWarning />;
