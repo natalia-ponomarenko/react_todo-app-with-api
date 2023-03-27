@@ -1,13 +1,8 @@
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
+  useCallback, useEffect, useMemo, useState,
 } from 'react';
 import {
-  getTodos,
-  addTodo,
-  deleteTodo,
+  getTodos, addTodo, deleteTodo, editTodoStatus, editTodoTitle,
 } from './api/todos';
 import { Todo } from './types/Todo';
 import { TodoList } from './components/TodoList';
@@ -27,20 +22,18 @@ export const App: React.FC = () => {
   const [isHidden, setHidden] = useState(false);
   const [isInputActive, setInputActive] = useState(false);
   const [inputTitle, setInputTitle] = useState('');
-  const [idsToDelete, setIdsToDelete] = useState<number[]>([]);
+  const [loadingTodos, setLoadingTodos] = useState<number[]>([]);
 
   useEffect(() => {
-    setErrorType(ErrorType.NONE);
-
     getTodos(USER_ID)
-      .then(data => {
+      .then((data) => {
         setTodos(data);
       })
       .catch(() => {
         setErrorType(ErrorType.LOAD);
         setHidden(false);
       });
-  }, []);
+  }, [todos]);
 
   const activeTodos = useMemo(() => {
     return todos.filter((todo) => !todo.completed).length;
@@ -77,7 +70,7 @@ export const App: React.FC = () => {
     [filterTodos, filterType],
   );
 
-  const addTodoItem = (newTodo: Todo) => {
+  const addTodoItem = useCallback((newTodo: Todo) => {
     const { title } = newTodo;
 
     if (title.trim() === '') {
@@ -91,8 +84,8 @@ export const App: React.FC = () => {
     setInputActive(true);
 
     addTodo(USER_ID, newTodo)
-      .then(result => {
-        setTodos(prevTodos => [...prevTodos, result]);
+      .then((result) => {
+        setTodos((prevTodos) => [...prevTodos, result]);
       })
       .catch(() => {
         setErrorType(ErrorType.ADD);
@@ -102,33 +95,71 @@ export const App: React.FC = () => {
         setInputActive(false);
         setTempTodo(null);
       });
-  };
+  }, [todos]);
 
-  const deleteTodoItem = async (todoId: number) => {
-    setIdsToDelete(prevState => [...prevState, todoId]);
+  const deleteTodoItem = useCallback((todoId: number) => {
+    setLoadingTodos((prevState) => [...prevState, todoId]);
 
-    deleteTodo(todoId).then(() => {
-      setTodos(prevTodos => prevTodos.filter(
-        (todo) => todo.id !== todoId,
-      ));
-    })
+    deleteTodo(todoId)
+      .then(() => {
+        setTodos((prevTodos) => prevTodos.filter((todo) => todo.id !== todoId));
+      })
       .catch(() => {
         setErrorType(ErrorType.DELETE);
         setHidden(false);
       })
       .finally(() => {
-        setIdsToDelete([]);
+        setLoadingTodos([]);
       });
-  };
+  }, [todos]);
 
-  const clearCompleted = () => {
-    const completedIds = completedTodos.map(todo => todo.id);
+  const clearCompleted = useCallback(() => {
+    const completedIds = completedTodos.map((todo) => todo.id);
 
-    setIdsToDelete(completedIds);
+    setLoadingTodos(completedIds);
     completedTodos.forEach((todo) => {
       deleteTodoItem(todo.id);
     });
-  };
+  }, [completedTodos]);
+
+  const toggleTodoStatus = useCallback((todoId: number, completed: boolean) => {
+    setLoadingTodos((prevIds) => [...prevIds, todoId]);
+
+    editTodoStatus(todoId, !completed)
+      .catch(() => {
+        setErrorType(ErrorType.EDIT);
+        setHidden(false);
+      })
+      .finally(() => {
+        setLoadingTodos([]);
+      });
+  }, [todos]);
+
+  const toggleEveryTodoStatus = useCallback(() => {
+    const isAnyTodoCompleted = todos.some(todo => todo.completed === false);
+
+    if (isAnyTodoCompleted) {
+      todos.map(todo => (
+        toggleTodoStatus(todo.id, false)
+      ));
+    } else {
+      todos.map(todo => (
+        toggleTodoStatus(todo.id, true)
+      ));
+    }
+  }, [todos]);
+
+  const editTodo = useCallback((todoId: number, newTitle: string) => {
+    setLoadingTodos((prevIds) => [...prevIds, todoId]);
+    editTodoTitle(todoId, newTitle)
+      .catch(() => {
+        setErrorType(ErrorType.UPDATE);
+        setHidden(false);
+      })
+      .finally(() => {
+        setLoadingTodos([]);
+      });
+  }, [todos]);
 
   if (!USER_ID) {
     return <UserWarning />;
@@ -145,6 +176,7 @@ export const App: React.FC = () => {
           isInputActive={isInputActive}
           inputTitle={inputTitle}
           setInputTitle={setInputTitle}
+          toggleAll={toggleEveryTodoStatus}
         />
         {!!todos.length && (
           <>
@@ -152,7 +184,9 @@ export const App: React.FC = () => {
               todos={visibleTodos}
               tempTodo={tempTodo}
               onDelete={deleteTodoItem}
-              idsToDelete={idsToDelete}
+              loadingTodos={loadingTodos}
+              toggleTodoStatus={toggleTodoStatus}
+              editTodoTitle={editTodo}
             />
             <Filter
               notCompleted={activeTodos}
@@ -163,13 +197,11 @@ export const App: React.FC = () => {
           </>
         )}
       </div>
-      {errorType && (
-        <Notification
-          errorType={errorType}
-          closeNotification={() => setHidden(true)}
-          isHidden={isHidden}
-        />
-      )}
+      <Notification
+        errorType={errorType}
+        closeNotification={() => setHidden(true)}
+        isHidden={isHidden}
+      />
     </div>
   );
 };

@@ -12,3 +12,11 @@ export const addTodo = (userId: number, newTodo: Todo) => {
 export const deleteTodo = (id: number) => {
   return client.delete(`/todos/${id}`);
 };
+
+export const editTodoStatus = (id: number, completed: boolean) => {
+  return client.patch(`/todos/${id}`, { completed });
+};
+
+export const editTodoTitle = (id: number, title: string) => {
+  return client.patch(`/todos/${id}`, { title });
+};

@@ -2,22 +2,26 @@ import { TodoItem } from '../TodoItem/TodoItem';
 import { Todo } from '../../types/Todo';
 
 type Props = {
-  todos: Todo[],
-  tempTodo: Todo | null,
-  onDelete: (id: number) => void,
-  idsToDelete: number[],
+  todos: Todo[];
+  tempTodo: Todo | null;
+  onDelete: (id: number) => void;
+  loadingTodos: number[];
+  toggleTodoStatus: (id: number, completed: boolean) => void;
+  editTodoTitle: (id: number, title: string) => void,
 };
 
 export const TodoList: React.FC<Props> = ({
   todos,
   tempTodo,
   onDelete,
-  idsToDelete,
+  loadingTodos,
+  toggleTodoStatus,
+  editTodoTitle,
 }) => {
   return (
     <section className="todoapp__main">
-      {todos.map(todo => {
-        const isLoading = idsToDelete.some(id => id === todo.id);
+      {todos.map((todo) => {
+        const isLoading = loadingTodos.some((id) => id === todo.id);
 
         return (
           <TodoItem
@@ -25,6 +29,8 @@ export const TodoList: React.FC<Props> = ({
             todo={todo}
             onDelete={onDelete}
             isLoading={isLoading}
+            toggleTodoStatus={toggleTodoStatus}
+            editTodoTitle={editTodoTitle}
           />
         );
       })}
@@ -33,6 +39,8 @@ export const TodoList: React.FC<Props> = ({
           key={tempTodo.id}
           todo={tempTodo}
           onDelete={() => {}}
+          toggleTodoStatus={() => {}}
+          editTodoTitle={() => {}}
           isLoading
         />
       )}

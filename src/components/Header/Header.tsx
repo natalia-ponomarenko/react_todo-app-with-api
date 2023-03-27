@@ -9,6 +9,7 @@ type Props = {
   isInputActive: boolean,
   inputTitle: string,
   setInputTitle: React.Dispatch<React.SetStateAction<string>>,
+  toggleAll: () => void,
 };
 
 export const Header: React.FC<Props> = ({
@@ -17,18 +18,20 @@ export const Header: React.FC<Props> = ({
   isInputActive,
   inputTitle,
   setInputTitle,
+  toggleAll,
 }) => {
   return (
     <header className="todoapp__header">
-      {activeTodos > 0 && (
-        <button
-          type="button"
-          className={classnames({
-            'todoapp__toggle-all': true,
-            active: activeTodos,
-          })}
-        />
-      )}
+      <button
+        type="button"
+        className={classnames(
+          'todoapp__toggle-all',
+          {
+            active: activeTodos === 0,
+          },
+        )}
+        onClick={toggleAll}
+      />
       <Form
         onAdd={onAdd}
         isInputActive={isInputActive}
